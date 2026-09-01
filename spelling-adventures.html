@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Spelling Adventures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EAF7FF;
+    --card:#FFFFFF;
+    --ink:#2B2A3D;
+    --ink-soft:#5B5A73;
+    --pink:#FF5FA2;
+    --pink-deep:#E23E82;
+    --yellow:#FFC13C;
+    --yellow-deep:#E8A50F;
+    --green:#2FCB86;
+    --green-deep:#1DA968;
+    --blue:#4FA8FF;
+    --blue-deep:#2E86E8;
+    --violet:#7C5CFF;
+    --violet-deep:#5F3EE0;
+    --orange:#FF8A4C;
+    --orange-deep:#E36A25;
+    --font-head:'Baloo 2', system-ui, sans-serif;
+    --font-body:'Lexend', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);}
+  #app{
+    --fs-base:16px;
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    padding:18px 18px 40px;
+    position:relative;
+    overflow-x:hidden;
+  }
+  #app.text-large{--fs-base:19px;}
+  #app.text-xlarge{--fs-base:22px;}
+  h1,h2,h3{font-family:var(--font-head);margin:0;}
+  button{font-family:var(--font-body);cursor:pointer;border:none;background:none;}
+  button:focus-visible, [tabindex]:focus-visible{outline:3px solid var(--violet);outline-offset:3px;}
+  input:focus-visible{outline:3px solid var(--violet);outline-offset:1px;}
+
+  .screen{display:none;flex-direction:column;gap:16px;}
+  .screen.active{display:flex;}
+
+  /* topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;}
+  .icon-btn{
+    width:44px;height:44px;border-radius:14px;background:var(--card);
+    font-size:calc(var(--fs-base) * 1.1);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 0 rgba(43,42,61,0.15);
+  }
+  .icon-btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(43,42,61,0.15);}
+  .stars-badge{
+    font-family:var(--font-head);font-weight:700;font-size:calc(var(--fs-base)*1.15);
+    background:var(--card);padding:8px 16px;border-radius:20px;
+    box-shadow:0 4px 0 rgba(43,42,61,0.15);
+  }
+
+  .app-title{font-size:calc(var(--fs-base)*2.0);font-weight:800;text-align:center;color:var(--violet-deep);margin-top:4px;}
+
+  .week-preview{
+    background:var(--card);border-radius:20px;padding:14px 18px;
+    box-shadow:0 4px 0 rgba(43,42,61,0.1);
+  }
+  .week-preview .preview-label{margin:0 0 8px;font-size:calc(var(--fs-base)*0.95);color:var(--ink-soft);font-weight:500;}
+  .week-preview .preview-label.second{margin-top:14px;}
+  .word-chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .word-chip{
+    background:#F1F0FF;color:var(--violet-deep);font-weight:600;
+    padding:6px 12px;border-radius:12px;font-size:calc(var(--fs-base)*0.9);
+    letter-spacing:0.02em;
+  }
+  .word-chip.spelling{background:#FFE6F1;color:var(--pink-deep);}
+  .empty-note{color:var(--ink-soft);font-size:calc(var(--fs-base)*0.85);font-style:italic;}
+
+  .section-label{font-family:var(--font-head);font-weight:700;font-size:calc(var(--fs-base)*1.05);color:var(--ink-soft);margin:4px 0 -2px 4px;}
+
+  .mode-grid{display:flex;flex-direction:column;gap:14px;}
+  .mode-card{
+    display:flex;align-items:center;gap:14px;text-align:left;
+    border-radius:22px;padding:18px 20px;border:3px solid transparent;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  .mode-card:active{transform:translateY(4px);}
+  .mode-card .mode-emoji{font-size:calc(var(--fs-base)*2);flex-shrink:0;}
+  .mode-card .mode-name{font-family:var(--font-head);font-weight:700;font-size:calc(var(--fs-base)*1.25);display:block;}
+  .mode-card .mode-desc{font-size:calc(var(--fs-base)*0.88);display:block;margin-top:2px;}
+  .mode-pink{background:#FFE6F1;border-color:var(--pink);box-shadow:0 6px 0 var(--pink-deep);color:var(--pink-deep);}
+  .mode-blue{background:#E4F2FF;border-color:var(--blue);box-shadow:0 6px 0 var(--blue-deep);color:var(--blue-deep);}
+  .mode-violet{background:#EFE9FF;border-color:var(--violet);box-shadow:0 6px 0 var(--violet-deep);color:var(--violet-deep);}
+  .mode-orange{background:#FFEEE0;border-color:var(--orange);box-shadow:0 6px 0 var(--orange-deep);color:var(--orange-deep);}
+  .mode-card:active{box-shadow:0 1px 0 rgba(0,0,0,0.15) !important;}
+  .mode-card.disabled{opacity:.4;pointer-events:none;}
+
+  /* generic game screen */
+  .game-top{display:flex;align-items:center;justify-content:space-between;}
+  .back-btn{font-size:calc(var(--fs-base)*0.95);color:var(--ink-soft);font-weight:600;display:flex;align-items:center;gap:4px;}
+  .progress-pill{background:var(--card);border-radius:20px;padding:6px 14px;font-weight:600;font-size:calc(var(--fs-base)*0.85);box-shadow:0 3px 0 rgba(43,42,61,0.1);}
+
+  .game-card{
+    background:var(--card);border-radius:26px;padding:26px 22px;
+    box-shadow:0 6px 0 rgba(43,42,61,0.1);
+    display:flex;flex-direction:column;align-items:center;gap:20px;
+  }
+
+  .speak-btn{
+    width:60px;height:60px;border-radius:50%;background:var(--yellow);
+    box-shadow:0 5px 0 var(--yellow-deep);font-size:calc(var(--fs-base)*1.6);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .speak-btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--yellow-deep);}
+
+  /* word builder */
+  .blanks-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+  .blank-slot{
+    width:calc(var(--fs-base)*2.6);height:calc(var(--fs-base)*2.6);
+    border-bottom:4px solid var(--ink-soft);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-head);font-weight:700;font-size:calc(var(--fs-base)*1.5);
+    text-transform:uppercase;background:#F7F7FB;
+  }
+  .blank-slot.filled{background:#EFEBFF;border-bottom-color:var(--violet);}
+  .blank-slot.correct{background:#DFF9EA;border-bottom-color:var(--green-deep);color:var(--green-deep);}
+  .blank-slot.wrong{animation:shake .4s;background:#FFE3E3;border-bottom-color:#E24E4E;}
+  @keyframes shake{
+    10%,90%{transform:translateX(-4px);} 20%,80%{transform:translateX(5px);}
+    30%,50%,70%{transform:translateX(-7px);} 40%,60%{transform:translateX(7px);}
+  }
+  .tiles-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .tile{
+    width:calc(var(--fs-base)*2.6);height:calc(var(--fs-base)*2.6);
+    border-radius:12px;background:var(--pink);color:#fff;
+    font-family:var(--font-head);font-weight:700;font-size:calc(var(--fs-base)*1.4);
+    text-transform:uppercase;box-shadow:0 4px 0 var(--pink-deep);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  .tile:nth-child(odd){transform:rotate(-3deg);}
+  .tile:nth-child(even){transform:rotate(2deg);}
+  .tile:active{transform:translateY(3px) rotate(0deg) !important;box-shadow:0 1px 0 var(--pink-deep);}
+  .tile.used{opacity:0;pointer-events:none;}
+  .hint-btn{font-size:calc(var(--fs-base)*0.9);color:var(--violet-deep);font-weight:600;background:#F1F0FF;padding:8px 16px;border-radius:14px;}
+
+  /* race */
+  .timer-wrap{width:100%;background:#F0EFFA;border-radius:12px;height:14px;overflow:hidden;}
+  .timer-bar{height:100%;background:var(--blue);border-radius:12px;transition:width .25s linear, background .25s;}
+  .timer-bar.low{background:#E8735A;}
+  .race-word-display{font-family:var(--font-head);font-size:calc(var(--fs-base)*1.1);color:var(--ink-soft);}
+  .race-input{
+    width:100%;font-size:calc(var(--fs-base)*1.4);font-family:var(--font-body);
+    padding:14px 16px;border-radius:14px;border:3px solid var(--blue);
+    text-align:center;letter-spacing:0.08em;background:#F7FBFF;
+  }
+  .race-input:focus{outline:none;border-color:var(--violet);}
+  .go-btn{
+    background:var(--blue);color:#fff;font-family:var(--font-head);font-weight:700;
+    font-size:calc(var(--fs-base)*1.1);padding:14px 0;width:100%;border-radius:16px;
+    box-shadow:0 5px 0 var(--blue-deep);
+  }
+  .go-btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--blue-deep);}
+
+  /* fill in the blank (spelling story + vocab) */
+  .story-sentence{
+    font-size:calc(var(--fs-base)*1.25);line-height:1.7;text-align:center;
+    font-weight:500;
+  }
+  .story-blank{display:inline-block;min-width:70px;border-bottom:4px dashed var(--green-deep);}
+  #screen-vocabblank .story-blank{border-bottom-color:var(--orange-deep);}
+  .word-bank{display:flex;flex-direction:column;gap:10px;width:100%;}
+  .word-bank button{
+    background:#E3FBF0;color:var(--green-deep);font-weight:700;font-family:var(--font-head);
+    font-size:calc(var(--fs-base)*1.15);padding:14px;border-radius:14px;
+    border:3px solid transparent;text-transform:capitalize;text-align:center;
+  }
+  #screen-vocabblank .word-bank button{background:#FFEEE0;color:var(--orange-deep);}
+  .word-bank button:active{transform:translateY(3px);}
+  .word-bank button.wrong{animation:shake .4s;border-color:#E24E4E;}
+  .word-bank button.correct{background:var(--green);color:#fff;border-color:var(--green-deep);}
+  #screen-vocabblank .word-bank button.correct{background:var(--orange);color:#fff;border-color:var(--orange-deep);}
+
+  /* meaning match */
+  .mm-word-display{font-family:var(--font-head);font-weight:800;font-size:calc(var(--fs-base)*1.8);color:var(--violet-deep);text-transform:capitalize;}
+  .word-bank.meaning-mode button{
+    background:#F1EEFF;color:var(--ink);font-weight:500;font-family:var(--font-body);
+    text-transform:none;text-align:left;line-height:1.45;font-size:calc(var(--fs-base)*1.0);
+  }
+  .word-bank.meaning-mode button.correct{background:var(--violet);color:#fff;}
+
+  .feedback-line{font-weight:600;text-align:center;min-height:1.4em;font-size:calc(var(--fs-base)*1.05);}
+  .feedback-line.good{color:var(--green-deep);}
+  .feedback-line.hint{color:var(--ink-soft);font-weight:500;}
+
+  /* celebrate + setup */
+  .celebrate-wrap{align-items:center;text-align:center;padding-top:40px;}
+  .celebrate-emoji{font-size:64px;}
+  .celebrate-stars{font-family:var(--font-head);font-size:calc(var(--fs-base)*1.6);color:var(--yellow-deep);font-weight:800;}
+  .primary-btn{
+    background:var(--violet);color:#fff;font-family:var(--font-head);font-weight:700;
+    font-size:calc(var(--fs-base)*1.1);padding:14px 28px;border-radius:16px;
+    box-shadow:0 5px 0 var(--violet-deep);
+  }
+  .primary-btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--violet-deep);}
+  #screen-setup p{color:var(--ink-soft);max-width:300px;font-size:calc(var(--fs-base)*0.95);}
+  #screen-setup input{max-width:280px;margin-top:6px;}
+
+  /* parent screen */
+  .parent-card{background:var(--card);border-radius:20px;padding:18px;box-shadow:0 4px 0 rgba(43,42,61,0.1);}
+  .parent-card h2{font-size:calc(var(--fs-base)*1.2);margin-bottom:6px;}
+  .parent-card p{font-size:calc(var(--fs-base)*0.88);color:var(--ink-soft);line-height:1.5;}
+  .parent-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .parent-tab-btn{flex:1;padding:11px;border-radius:12px;background:#F1F0FF;color:var(--ink-soft);font-weight:600;font-size:calc(var(--fs-base)*0.9);}
+  .parent-tab-btn.active{background:var(--violet);color:#fff;}
+  .profile-row{display:flex;gap:8px;align-items:center;}
+  .profile-row input{flex:1;}
+  .small-save-btn{
+    background:var(--violet);color:#fff;font-family:var(--font-head);font-weight:700;
+    font-size:calc(var(--fs-base)*0.9);padding:0 16px;height:46px;border-radius:12px;
+    box-shadow:0 4px 0 var(--violet-deep);white-space:nowrap;
+  }
+  .small-save-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--violet-deep);}
+  textarea, input[type="text"]{
+    width:100%;border-radius:14px;border:2px solid #D9D6F5;
+    padding:12px;font-family:var(--font-body);font-size:calc(var(--fs-base)*0.95);
+    color:var(--ink);
+  }
+  textarea{min-height:180px;resize:vertical;}
+  textarea:focus, input[type="text"]:focus{outline:none;border-color:var(--violet);}
+  .save-btn{
+    background:var(--green);color:#fff;font-family:var(--font-head);font-weight:700;
+    font-size:calc(var(--fs-base)*1.05);padding:13px;width:100%;border-radius:14px;
+    box-shadow:0 5px 0 var(--green-deep);
+  }
+  .save-btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--green-deep);}
+  .saved-msg{color:var(--green-deep);font-weight:600;text-align:center;font-size:calc(var(--fs-base)*0.9);min-height:1.3em;}
+
+  .confetti-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50;}
+  .confetti-piece{position:absolute;top:-20px;font-size:22px;animation:fall 1.1s ease-in forwards;}
+  @keyframes fall{
+    to{transform:translateY(110vh) rotate(200deg);opacity:0.2;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .tile, .blank-slot, .mode-card, .icon-btn, .go-btn, .save-btn, .primary-btn{transition:none !important;}
+    .confetti-piece{display:none;}
+  }
+</style>
+</head>
+<body>
+<div id="app" class="text-normal">
+
+  <div id="screen-loading" class="screen active">
+    <p style="text-align:center;margin-top:60px;color:var(--ink-soft);">Getting things ready…</p>
+  </div>
+
+  <div id="screen-setup" class="screen celebrate-wrap" style="padding-top:50px;">
+    <div style="font-size:48px;">👋</div>
+    <h2 style="font-size:1.3em;">Welcome to Spelling Adventures!</h2>
+    <p>What's your speller's name? This is just for this device — everyone who plays on their own computer gets their own words and stars.</p>
+    <input type="text" id="setup-name-input" placeholder="Type a name...">
+    <button class="primary-btn" id="setup-start-btn" style="margin-top:10px;">Let's Go! 🎉</button>
+  </div>
+
+  <div id="screen-home" class="screen">
+    <div class="topbar">
+      <button id="btn-textsize" class="icon-btn" title="Change text size">Aa</button>
+      <div class="stars-badge">⭐ <span id="star-count">0</span></div>
+      <button id="btn-parent" class="icon-btn" title="For parents">⚙️</button>
+    </div>
+    <h1 class="app-title" id="app-title">Spelling Adventures</h1>
+    <div class="week-preview">
+      <p class="preview-label" id="spelling-preview-label">This week's spelling words</p>
+      <div class="word-chips" id="spelling-chips"></div>
+      <p class="preview-label second" id="vocab-preview-label">This week's vocabulary words</p>
+      <div class="word-chips" id="vocab-chips"></div>
+    </div>
+    <div class="mode-grid">
+      <p class="section-label">Spelling Games</p>
+      <button class="mode-card mode-pink" data-mode="builder">
+        <span class="mode-emoji">🧩</span>
+        <span>
+          <span class="mode-name">Word Builder</span>
+          <span class="mode-desc">Snap the letters into place</span>
+        </span>
+      </button>
+      <button class="mode-card mode-blue" data-mode="race">
+        <span class="mode-emoji">⏱️</span>
+        <span>
+          <span class="mode-name">Spelling Race</span>
+          <span class="mode-desc">Listen close and type it fast</span>
+        </span>
+      </button>
+      <p class="section-label">Vocabulary Games</p>
+      <button class="mode-card mode-violet" data-mode="meaning">
+        <span class="mode-emoji">🧠</span>
+        <span>
+          <span class="mode-name">Word Meanings</span>
+          <span class="mode-desc">Match the word to what it means</span>
+        </span>
+      </button>
+      <button class="mode-card mode-orange" data-mode="vocabblank">
+        <span class="mode-emoji">📖</span>
+        <span>
+          <span class="mode-name">Story Time</span>
+          <span class="mode-desc">Finish the sentence</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <div id="screen-parent" class="screen">
+    <div class="topbar">
+      <button class="icon-btn" id="parent-back">←</button>
+      <h2 style="font-size:1.2em;">For Parents</h2>
+      <span style="width:44px;"></span>
+    </div>
+
+    <div class="parent-card">
+      <h2>Speller's name</h2>
+      <div class="profile-row">
+        <input type="text" id="profile-name-input" placeholder="Name">
+        <button class="small-save-btn" id="profile-save-btn">Save</button>
+      </div>
+      <p class="saved-msg" id="profile-saved-msg"></p>
+    </div>
+
+    <div class="parent-tabs">
+      <button class="parent-tab-btn active" id="tab-spelling">Spelling List</button>
+      <button class="parent-tab-btn" id="tab-vocab">Vocabulary List</button>
+    </div>
+    <div class="parent-card">
+      <h2 id="parent-heading">This week's spelling words</h2>
+      <p id="parent-instructions">One word per line — that's all you need. Example:<br><em>whale</em></p>
+      <textarea id="word-input" placeholder="cat
+dog | My dog likes to run.
+happy"></textarea>
+      <button class="save-btn" id="save-words-btn" style="margin-top:12px;">Save this list</button>
+      <p class="saved-msg" id="saved-msg"></p>
+    </div>
+  </div>
+
+  <div id="screen-builder" class="screen">
+    <div class="game-top">
+      <button class="back-btn" id="builder-back">← Home</button>
+      <div class="progress-pill" id="builder-progress">1 of 5</div>
+    </div>
+    <div class="game-card">
+      <button class="speak-btn" id="builder-speak" title="Hear the word">🔊</button>
+      <div class="blanks-row" id="builder-blanks"></div>
+      <div class="tiles-row" id="builder-tiles"></div>
+      <div class="feedback-line" id="builder-feedback"></div>
+      <button class="hint-btn" id="builder-hint">💡 Give me a hint</button>
+    </div>
+  </div>
+
+  <div id="screen-race" class="screen">
+    <div class="game-top">
+      <button class="back-btn" id="race-back">← Home</button>
+      <div class="progress-pill" id="race-progress">1 of 5</div>
+    </div>
+    <div class="game-card">
+      <div class="timer-wrap"><div class="timer-bar" id="race-timerbar" style="width:100%;"></div></div>
+      <button class="speak-btn" id="race-speak" title="Hear the word">🔊</button>
+      <div class="race-word-display">Type the word you hear</div>
+      <input type="text" id="race-input" class="race-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type here">
+      <button class="go-btn" id="race-submit">Check it!</button>
+      <div class="feedback-line" id="race-feedback"></div>
+    </div>
+  </div>
+
+  <div id="screen-meaning" class="screen">
+    <div class="game-top">
+      <button class="back-btn" id="mm-back">← Home</button>
+      <div class="progress-pill" id="mm-progress">1 of 5</div>
+    </div>
+    <div class="game-card">
+      <button class="speak-btn" id="mm-speak" title="Hear the word">🔊</button>
+      <div class="mm-word-display" id="mm-word"></div>
+      <div style="font-weight:600;color:var(--ink-soft);">What does this word mean?</div>
+      <div class="word-bank meaning-mode" id="mm-options"></div>
+      <div class="feedback-line" id="mm-feedback"></div>
+    </div>
+  </div>
+
+  <div id="screen-vocabblank" class="screen">
+    <div class="game-top">
+      <button class="back-btn" id="vb-back">← Home</button>
+      <div class="progress-pill" id="vb-progress">1 of 5</div>
+    </div>
+    <div class="game-card">
+      <button class="speak-btn" id="vb-speak" title="Hear the sentence">🔊</button>
+      <div class="story-sentence" id="vb-sentence"></div>
+      <div class="word-bank" id="vb-wordbank"></div>
+      <div class="feedback-line" id="vb-feedback"></div>
+    </div>
+  </div>
+
+  <div id="screen-celebrate" class="screen celebrate-wrap">
+    <div class="celebrate-emoji">🎉</div>
+    <h2 style="font-size:1.4em;">Amazing work!</h2>
+    <div class="celebrate-stars" id="celebrate-stars">+0 stars</div>
+    <button class="primary-btn" id="celebrate-home">Back to Home</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const appEl = document.getElementById('app');
+  const STORAGE_PREFIX = 'saApp_';
+  let spellingWords = [];  // [{word, sentence}]
+  let vocabWords = [];     // [{word, definition, sentence}]
+  let progress = { totalStars: 0 };
+  let settings = { textSize: 'normal' };
+  let profile = { childName: '' };
+  let parentTab = 'spelling';
+
+  // ---------- storage (plain browser localStorage — works standalone, no account needed) ----------
+  function lsGet(key, fallback){
+    try{
+      const raw = localStorage.getItem(STORAGE_PREFIX + key);
+      return raw ? JSON.parse(raw) : fallback;
+    }catch(e){ return fallback; }
+  }
+  function lsSet(key, value){
+    try{ localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); }
+    catch(e){ console.error('Could not save "'+key+'" — storage may be full or blocked.', e); }
+  }
+  function saveSpellingWords(){ lsSet('spellingWords', spellingWords); }
+  function saveVocabWords(){ lsSet('vocabWords', vocabWords); }
+  function saveProgress(){ lsSet('progress', progress); }
+  function saveSettings(){ lsSet('settings', settings); }
+  function saveProfile(){ lsSet('profile', profile); }
+
+  function loadAll(){
+    spellingWords = lsGet('spellingWords', []);
+    vocabWords = lsGet('vocabWords', []);
+    progress = lsGet('progress', { totalStars: 0 });
+    settings = lsGet('settings', { textSize: 'normal' });
+    profile = lsGet('profile', { childName: '' });
+    applySettings();
+    if(!profile.childName){
+      showScreen('setup');
+    } else {
+      renderHome();
+      showScreen('home');
+    }
+  }
+
+  // ---------- helpers ----------
+  function showScreen(name){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-'+name).classList.add('active');
+  }
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+  function speak(text){
+    try{
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.85;
+      u.pitch = 1.05;
+      window.speechSynthesis.speak(u);
+    }catch(e){ /* speech not available */ }
+  }
+  function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+
+  function applySettings(){
+    appEl.classList.remove('text-normal','text-large','text-xlarge');
+    appEl.classList.add('text-'+(settings.textSize||'normal'));
+  }
+
+  function awardStar(){
+    progress.totalStars = (progress.totalStars||0) + 1;
+    document.getElementById('star-count').textContent = progress.totalStars;
+    saveProgress();
+  }
+
+  function confettiBurst(){
+    const layer = document.createElement('div');
+    layer.className = 'confetti-layer';
+    const pieces = ['⭐','🎉','✨','💖','🌟'];
+    for(let i=0;i<14;i++){
+      const p = document.createElement('span');
+      p.className = 'confetti-piece';
+      p.textContent = pieces[Math.floor(Math.random()*pieces.length)];
+      p.style.left = Math.random()*100+'vw';
+      p.style.animationDelay = (Math.random()*0.3)+'s';
+      layer.appendChild(p);
+    }
+    document.body.appendChild(layer);
+    setTimeout(()=>layer.remove(), 1400);
+  }
+
+  function finishSession(stars){
+    stopRaceTimer();
+    document.getElementById('celebrate-stars').textContent = '+' + stars + ' star' + (stars===1?'':'s');
+    showScreen('celebrate');
+  }
+  document.getElementById('celebrate-home').addEventListener('click', ()=>{
+    renderHome();
+    showScreen('home');
+  });
+
+  // ---------- setup ----------
+  function completeSetup(){
+    const val = document.getElementById('setup-name-input').value.trim();
+    profile.childName = val || 'Speller';
+    saveProfile();
+    renderHome();
+    showScreen('home');
+  }
+  document.getElementById('setup-start-btn').addEventListener('click', completeSetup);
+  document.getElementById('setup-name-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') completeSetup(); });
+
+  // ---------- home ----------
+  function setCardDisabled(mode, isDisabled){
+    const el = document.querySelector('.mode-card[data-mode="'+mode+'"]');
+    if(el) el.classList.toggle('disabled', isDisabled);
+  }
+  function renderChips(containerId, list, extraClass){
+    const wrap = document.getElementById(containerId);
+    wrap.innerHTML = '';
+    if(list.length === 0){
+      const note = document.createElement('span');
+      note.className = 'empty-note';
+      note.textContent = 'None yet — add them in ⚙️';
+      wrap.appendChild(note);
+      return;
+    }
+    list.forEach(w=>{
+      const chip = document.createElement('span');
+      chip.className = 'word-chip' + (extraClass ? ' '+extraClass : '');
+      chip.textContent = w.word;
+      wrap.appendChild(chip);
+    });
+  }
+  function renderHome(){
+    document.getElementById('app-title').textContent = profile.childName ? (profile.childName + "'s Spelling Adventures") : 'Spelling Adventures';
+    document.getElementById('star-count').textContent = progress.totalStars || 0;
+    renderChips('spelling-chips', spellingWords, 'spelling');
+    renderChips('vocab-chips', vocabWords, '');
+    document.getElementById('spelling-preview-label').textContent = spellingWords.length
+      ? spellingWords.length + ' spelling word' + (spellingWords.length===1?'':'s') + ' this week' : "This week's spelling words";
+    document.getElementById('vocab-preview-label').textContent = vocabWords.length
+      ? vocabWords.length + ' vocabulary word' + (vocabWords.length===1?'':'s') + ' this week' : "This week's vocabulary words";
+
+    setCardDisabled('builder', spellingWords.length===0);
+    setCardDisabled('race', spellingWords.length===0);
+    setCardDisabled('vocabblank', vocabWords.filter(w=>w.sentence && w.sentence.trim()).length===0);
+    setCardDisabled('meaning', vocabWords.filter(w=>w.definition && w.definition.trim()).length===0);
+  }
+
+  document.querySelectorAll('.mode-card').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.classList.contains('disabled')) return;
+      const mode = btn.dataset.mode;
+      if(mode==='builder') startBuilder();
+      else if(mode==='race') startRace();
+      else if(mode==='meaning') startMeaning();
+      else if(mode==='vocabblank') vocabBlankGame.start(vocabWords);
+    });
+  });
+
+  // ---------- text size ----------
+  document.getElementById('btn-textsize').addEventListener('click', ()=>{
+    const order = ['normal','large','xlarge'];
+    const idx = order.indexOf(settings.textSize||'normal');
+    settings.textSize = order[(idx+1)%order.length];
+    applySettings();
+    saveSettings();
+  });
+
+  // ---------- parent screen ----------
+  function renderParentTab(){
+    const isSpelling = parentTab === 'spelling';
+    document.getElementById('tab-spelling').classList.toggle('active', isSpelling);
+    document.getElementById('tab-vocab').classList.toggle('active', !isSpelling);
+    document.getElementById('parent-heading').textContent = isSpelling ? "This week's spelling words" : "This week's vocabulary words";
+    document.getElementById('parent-instructions').innerHTML = isSpelling
+      ? 'One word per line — that\'s all you need. Every word works right away in Word Builder and Spelling Race. Example:<br><em>whale</em>'
+      : 'One word per line. Add the meaning after a "|" to unlock <strong>Word Meanings</strong> for that word, and an example sentence after a second "|" to unlock <strong>Story Time</strong> too. Example:<br><em>enormous | very, very big | The elephant was enormous.</em>';
+    const ta = document.getElementById('word-input');
+    ta.placeholder = isSpelling ? 'cat\ndog | My dog likes to run.\nhappy' : 'enormous | very, very big | The elephant was enormous.\nbrave | not scared of anything';
+    ta.value = isSpelling
+      ? spellingWords.map(w=> w.sentence ? (w.word+' | '+w.sentence) : w.word).join('\n')
+      : vocabWords.map(w=>{
+          let line = w.word;
+          if(w.definition) line += ' | ' + w.definition;
+          if(w.sentence) line += (w.definition ? ' | ' : ' |  | ') + w.sentence;
+          return line;
+        }).join('\n');
+    document.getElementById('saved-msg').textContent = '';
+  }
+  document.getElementById('btn-parent').addEventListener('click', ()=>{
+    parentTab = 'spelling';
+    document.getElementById('profile-name-input').value = profile.childName || '';
+    document.getElementById('profile-saved-msg').textContent = '';
+    renderParentTab();
+    showScreen('parent');
+  });
+  document.getElementById('tab-spelling').addEventListener('click', ()=>{ parentTab='spelling'; renderParentTab(); });
+  document.getElementById('tab-vocab').addEventListener('click', ()=>{ parentTab='vocab'; renderParentTab(); });
+  document.getElementById('parent-back').addEventListener('click', ()=>{ renderHome(); showScreen('home'); });
+  document.getElementById('save-words-btn').addEventListener('click', ()=>{
+    const raw = document.getElementById('word-input').value;
+    const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+    if(parentTab === 'spelling'){
+      spellingWords = lines.map(line=>{
+        const parts = line.split('|');
+        const word = parts[0].trim();
+        const sentence = parts[1] ? parts[1].trim() : '';
+        return { word, sentence };
+      }).filter(w=>w.word.length>0);
+      saveSpellingWords();
+      document.getElementById('saved-msg').textContent = 'Saved! ' + spellingWords.length + ' spelling word' + (spellingWords.length===1?'':'s') + ' ready to practice.';
+    } else {
+      vocabWords = lines.map(line=>{
+        const parts = line.split('|');
+        const word = parts[0].trim();
+        const definition = parts[1] ? parts[1].trim() : '';
+        const sentence = parts[2] ? parts[2].trim() : '';
+        return { word, definition, sentence };
+      }).filter(w=>w.word.length>0);
+      saveVocabWords();
+      document.getElementById('saved-msg').textContent = 'Saved! ' + vocabWords.length + ' vocabulary word' + (vocabWords.length===1?'':'s') + ' ready to practice.';
+    }
+  });
+  document.getElementById('profile-save-btn').addEventListener('click', ()=>{
+    const val = document.getElementById('profile-name-input').value.trim();
+    profile.childName = val || 'Speller';
+    saveProfile();
+    document.getElementById('profile-saved-msg').textContent = 'Name updated!';
+  });
+
+  // ================= WORD BUILDER (spelling) =================
+  let bQueue=[], bIndex=0, bSessionStars=0;
+  let builderWord = '';
+  let builderTiles = [];
+  let builderSlots = [];
+
+  function startBuilder(){
+    bQueue = shuffle(spellingWords); bIndex = 0; bSessionStars = 0;
+    showScreen('builder'); loadBuilderWord();
+  }
+  function loadBuilderWord(){
+    if(bIndex >= bQueue.length){ finishSession(bSessionStars); return; }
+    document.getElementById('builder-progress').textContent = (bIndex+1) + ' of ' + bQueue.length;
+    document.getElementById('builder-feedback').textContent = '';
+    const entry = bQueue[bIndex];
+    builderWord = entry.word.toLowerCase();
+    builderSlots = new Array(builderWord.length).fill(null);
+    let letters = builderWord.split('').map((c,i)=>({ id: i, char: c, used:false }));
+    let scrambled = shuffle(letters);
+    let tries = 0;
+    while(tries < 8 && scrambled.map(t=>t.char).join('') === builderWord && builderWord.length>1){
+      scrambled = shuffle(letters); tries++;
+    }
+    builderTiles = scrambled;
+    renderBuilder();
+    speak(entry.word);
+  }
+  function renderBuilder(){
+    const blanksWrap = document.getElementById('builder-blanks');
+    blanksWrap.innerHTML = '';
+    builderSlots.forEach((slot, i)=>{
+      const el = document.createElement('div');
+      el.className = 'blank-slot' + (slot ? ' filled' : '') + (slot && slot.locked ? ' correct' : '');
+      el.textContent = slot ? slot.char : '';
+      if(slot && !slot.locked){
+        el.addEventListener('click', ()=>{
+          const tile = builderTiles.find(t=>t.id===slot.tileId);
+          if(tile) tile.used = false;
+          builderSlots[i] = null;
+          renderBuilder();
+        });
+      }
+      blanksWrap.appendChild(el);
+    });
+    const tilesWrap = document.getElementById('builder-tiles');
+    tilesWrap.innerHTML = '';
+    builderTiles.forEach(tile=>{
+      const el = document.createElement('button');
+      el.className = 'tile' + (tile.used ? ' used' : '');
+      el.textContent = tile.char;
+      el.disabled = tile.used;
+      el.addEventListener('click', ()=>{
+        const emptyIdx = builderSlots.findIndex(s=>s===null);
+        if(emptyIdx === -1) return;
+        builderSlots[emptyIdx] = { tileId: tile.id, char: tile.char, locked:false };
+        tile.used = true;
+        renderBuilder();
+        if(builderSlots.every(s=>s!==null)){
+          setTimeout(checkBuilderAnswer, 250);
+        }
+      });
+      tilesWrap.appendChild(el);
+    });
+  }
+  function checkBuilderAnswer(){
+    let allCorrect = true;
+    builderSlots.forEach((slot,i)=>{
+      if(!slot) { allCorrect=false; return; }
+      if(slot.char === builderWord[i]){ slot.locked = true; }
+      else { allCorrect = false; }
+    });
+    renderBuilder();
+    const wrongIdx = [];
+    builderSlots.forEach((slot,i)=>{ if(slot && !slot.locked) wrongIdx.push(i); });
+    if(wrongIdx.length){
+      wrongIdx.forEach(i=>{
+        const els = document.querySelectorAll('#builder-blanks .blank-slot');
+        if(els[i]) els[i].classList.add('wrong');
+      });
+      document.getElementById('builder-feedback').textContent = "So close — let's fix a couple letters!";
+      setTimeout(()=>{
+        wrongIdx.forEach(i=>{
+          const tile = builderTiles.find(t=>t.id===builderSlots[i].tileId);
+          if(tile) tile.used = false;
+          builderSlots[i] = null;
+        });
+        document.getElementById('builder-feedback').textContent = '';
+        renderBuilder();
+      }, 650);
+    }
+    if(allCorrect){
+      document.getElementById('builder-feedback').textContent = 'You spelled it! 🎉';
+      confettiBurst();
+      awardStar(); bSessionStars++;
+      setTimeout(()=>{ bIndex++; loadBuilderWord(); }, 1000);
+    }
+  }
+  document.getElementById('builder-speak').addEventListener('click', ()=> speak(builderWord));
+  document.getElementById('builder-back').addEventListener('click', ()=>{ renderHome(); showScreen('home'); });
+  document.getElementById('builder-hint').addEventListener('click', ()=>{
+    const i = builderSlots.findIndex(s=>s===null);
+    if(i===-1) return;
+    const tile = builderTiles.find(t=>!t.used && t.char===builderWord[i]);
+    if(tile){
+      tile.used = true;
+      builderSlots[i] = { tileId: tile.id, char: tile.char, locked:true };
+      renderBuilder();
+      if(builderSlots.every(s=>s!==null)) setTimeout(checkBuilderAnswer, 250);
+    }
+  });
+
+  // ================= SPELLING RACE =================
+  let rQueue=[], rIndex=0, rSessionStars=0;
+  let raceTimer = null;
+  let raceTimeLeft = 20;
+  const RACE_SECONDS = 20;
+
+  function startRace(){
+    rQueue = shuffle(spellingWords); rIndex = 0; rSessionStars = 0;
+    showScreen('race'); loadRaceWord();
+  }
+  function loadRaceWord(){
+    if(rIndex >= rQueue.length){ finishSession(rSessionStars); return; }
+    document.getElementById('race-progress').textContent = (rIndex+1) + ' of ' + rQueue.length;
+    document.getElementById('race-feedback').textContent = '';
+    document.getElementById('race-input').value = '';
+    document.getElementById('race-input').disabled = false;
+    const entry = rQueue[rIndex];
+    speak(entry.word);
+    raceTimeLeft = RACE_SECONDS;
+    updateTimerBar();
+    stopRaceTimer();
+    raceTimer = setInterval(()=>{
+      raceTimeLeft -= 0.25;
+      updateTimerBar();
+      if(raceTimeLeft <= 0){
+        stopRaceTimer();
+        checkRaceAnswer(true);
+      }
+    }, 250);
+    setTimeout(()=> document.getElementById('race-input').focus(), 200);
+  }
+  function updateTimerBar(){
+    const pct = Math.max(0, (raceTimeLeft/RACE_SECONDS)*100);
+    const bar = document.getElementById('race-timerbar');
+    bar.style.width = pct + '%';
+    bar.classList.toggle('low', pct < 30);
+  }
+  function stopRaceTimer(){ if(raceTimer){ clearInterval(raceTimer); raceTimer=null; } }
+  function checkRaceAnswer(timedOut){
+    stopRaceTimer();
+    const entry = rQueue[rIndex];
+    const typed = document.getElementById('race-input').value.trim().toLowerCase();
+    const correct = typed === entry.word.toLowerCase();
+    document.getElementById('race-input').disabled = true;
+    if(correct){
+      document.getElementById('race-feedback').textContent = 'Speedy and correct! 🎉';
+      document.getElementById('race-feedback').className = 'feedback-line good';
+      confettiBurst();
+      awardStar(); rSessionStars++;
+    } else {
+      document.getElementById('race-feedback').innerHTML = (timedOut ? "Time's up! " : 'Nice try! ') + 'The word was: <strong>' + entry.word + '</strong>';
+      document.getElementById('race-feedback').className = 'feedback-line hint';
+      speak(entry.word);
+    }
+    setTimeout(()=>{ rIndex++; loadRaceWord(); }, 1400);
+  }
+  document.getElementById('race-submit').addEventListener('click', ()=> checkRaceAnswer(false));
+  document.getElementById('race-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') checkRaceAnswer(false); });
+  document.getElementById('race-speak').addEventListener('click', ()=>{
+    const entry = rQueue[rIndex];
+    if(entry) speak(entry.word);
+  });
+  document.getElementById('race-back').addEventListener('click', ()=>{ stopRaceTimer(); renderHome(); showScreen('home'); });
+
+  // ================= FILL IN THE BLANK (shared: spelling story + vocab) =================
+  // Only words with a real example sentence can be the answer here — a sentence
+  // is the whole point (it's the clue she reads to figure out the word), so a
+  // word with no sentence is skipped rather than shown with a content-free filler line.
+  const BLANK_TOKEN = '@@BLANK@@';
+
+  function makeFillBlankGame(cfg){
+    let queue = [], index = 0, sessionStars = 0, fullList = [];
+    const el = id => document.getElementById(cfg.prefix + '-' + id);
+
+    function start(sourceList){
+      fullList = sourceList;
+      queue = shuffle(sourceList.filter(w=> w.sentence && w.sentence.trim()));
+      index = 0; sessionStars = 0;
+      showScreen(cfg.screenName);
+      loadWord();
+    }
+    function loadWord(){
+      if(index >= queue.length){ finishSession(sessionStars); return; }
+      el('progress').textContent = (index+1) + ' of ' + queue.length;
+      el('feedback').textContent = '';
+      const entry = queue[index];
+      const re = new RegExp('\\b'+escapeRegExp(entry.word)+'\\b','i');
+      const sentence = re.test(entry.sentence) ? entry.sentence.replace(re, BLANK_TOKEN) : (entry.sentence + ' (' + BLANK_TOKEN + ')');
+      el('sentence').innerHTML = sentence.split(BLANK_TOKEN).join('<span class="story-blank">&nbsp;</span>');
+      const others = fullList.filter(w=> w.word.toLowerCase() !== entry.word.toLowerCase());
+      const distractors = shuffle(others).slice(0,2).map(w=>w.word);
+      const bank = shuffle([entry.word, ...distractors]);
+      const wrap = el('wordbank');
+      wrap.innerHTML = '';
+      bank.forEach(w=>{
+        const btn = document.createElement('button');
+        btn.textContent = w;
+        btn.addEventListener('click', ()=>{
+          if(w.toLowerCase() === entry.word.toLowerCase()){
+            btn.classList.add('correct');
+            el('feedback').textContent = 'Great choice! 🎉';
+            el('feedback').className = 'feedback-line good';
+            confettiBurst();
+            awardStar(); sessionStars++;
+            const fullSentence = entry.sentence && entry.sentence.trim() ? entry.sentence : (entry.word.charAt(0).toUpperCase()+entry.word.slice(1) + '.');
+            speak(fullSentence);
+            setTimeout(()=>{ index++; loadWord(); }, 1300);
+          } else {
+            btn.classList.add('wrong');
+            setTimeout(()=> btn.classList.remove('wrong'), 400);
+          }
+        });
+        wrap.appendChild(btn);
+      });
+      speak(sentence.split(BLANK_TOKEN).join('blank'));
+    }
+    el('speak').addEventListener('click', ()=>{
+      const text = el('sentence').textContent;
+      if(text) speak(text.replace('\u00a0','blank'));
+    });
+    el('back').addEventListener('click', ()=>{ renderHome(); showScreen('home'); });
+
+    return { start };
+  }
+
+  const vocabBlankGame = makeFillBlankGame({ prefix:'vb', screenName:'vocabblank' });
+
+  // ================= MEANING MATCH (vocab) =================
+  let mQueue = [], mIndex = 0, mSessionStars = 0;
+
+  function startMeaning(){
+    mQueue = shuffle(vocabWords.filter(w=> w.definition && w.definition.trim()));
+    mIndex = 0; mSessionStars = 0;
+    showScreen('meaning'); loadMeaningWord();
+  }
+  function loadMeaningWord(){
+    if(mIndex >= mQueue.length){ finishSession(mSessionStars); return; }
+    document.getElementById('mm-progress').textContent = (mIndex+1) + ' of ' + mQueue.length;
+    document.getElementById('mm-feedback').textContent = '';
+    const entry = mQueue[mIndex];
+    document.getElementById('mm-word').textContent = entry.word;
+    speak(entry.word);
+    const others = vocabWords.filter(w=> w.definition && w.definition.trim() && w.word.toLowerCase() !== entry.word.toLowerCase());
+    const distractors = shuffle(others).slice(0,2).map(w=>w.definition);
+    const options = shuffle([entry.definition, ...distractors]);
+    const wrap = document.getElementById('mm-options');
+    wrap.innerHTML = '';
+    options.forEach(defText=>{
+      const btn = document.createElement('button');
+      btn.textContent = defText;
+      btn.addEventListener('click', ()=>{
+        if(defText === entry.definition){
+          btn.classList.add('correct');
+          document.getElementById('mm-feedback').textContent = 'Exactly right! 🎉';
+          document.getElementById('mm-feedback').className = 'feedback-line good';
+          confettiBurst();
+          awardStar(); mSessionStars++;
+          setTimeout(()=>{ mIndex++; loadMeaningWord(); }, 1200);
+        } else {
+          btn.classList.add('wrong');
+          setTimeout(()=> btn.classList.remove('wrong'), 400);
+        }
+      });
+      wrap.appendChild(btn);
+    });
+  }
+  document.getElementById('mm-speak').addEventListener('click', ()=>{
+    const entry = mQueue[mIndex];
+    if(entry) speak(entry.word);
+  });
+  document.getElementById('mm-back').addEventListener('click', ()=>{ renderHome(); showScreen('home'); });
+
+  // ---------- go ----------
+  loadAll();
+})();
+</script>
+</body>
+</html>
