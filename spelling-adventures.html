@@ -240,6 +240,12 @@
     box-shadow:0 5px 0 var(--green-deep);
   }
   .save-btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--green-deep);}
+  .reset-btn{
+    background:#F1F0FF;color:var(--violet-deep);font-family:var(--font-head);font-weight:700;
+    font-size:calc(var(--fs-base)*0.92);padding:11px;width:100%;border-radius:14px;
+    margin-top:8px;
+  }
+  .reset-btn:active{transform:translateY(2px);}
   .saved-msg{color:var(--green-deep);font-weight:600;text-align:center;font-size:calc(var(--fs-base)*0.9);min-height:1.3em;}
 
   .confetti-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50;}
@@ -342,6 +348,7 @@
 dog | My dog likes to run.
 happy"></textarea>
       <button class="save-btn" id="save-words-btn" style="margin-top:12px;">Save this list</button>
+      <button class="reset-btn" id="reset-words-btn">↺ Reset to this week's official words</button>
       <p class="saved-msg" id="saved-msg"></p>
     </div>
   </div>
@@ -415,6 +422,27 @@ happy"></textarea>
 (function(){
   const appEl = document.getElementById('app');
   const STORAGE_PREFIX = 'saApp_';
+
+  // Starting word lists — only used the very first time someone opens a
+  // fresh copy (no saved data yet). Editing and saving in the Parent
+  // screen replaces these permanently for that person's browser.
+  const DEFAULT_SPELLING_WORDS = [
+    { word: 'knit', sentence: '' },
+    { word: 'kneel', sentence: '' },
+    { word: 'nose', sentence: '' },
+    { word: 'center', sentence: '' },
+    { word: 'nugget', sentence: '' },
+    { word: 'running', sentence: '' },
+    { word: 'winner', sentence: '' },
+    { word: 'why', sentence: '' }
+  ];
+  const DEFAULT_VOCAB_WORDS = [
+    { word: 'Contest', definition: 'an event where individuals or teams compete to win', sentence: 'Isabella and Luke had a contest to see who could make the most basketball baskets in a row.' },
+    { word: 'Hoist', definition: 'to raise up in the air', sentence: "Isabella's dad had to hoist her up so she could reach the basketball hoop." },
+    { word: 'Mute', definition: 'silent; not speaking', sentence: 'Virginia hit mute during A for Adley so Isabella\'s dolls could take a quiet nap.' },
+    { word: 'Stands', definition: 'metal or wooden benches where people sit to watch a show or performance', sentence: "Luke and Virginia sat high up in the stands to cheer for Isabella's basketball team." },
+    { word: 'Pouts', definition: 'makes a sad face by curling the lower lip', sentence: 'Luke pouts and sticks out his lip every time he loses a basketball game to Isabella.' }
+  ];
   let spellingWords = [];  // [{word, sentence}]
   let vocabWords = [];     // [{word, definition, sentence}]
   let progress = { totalStars: 0 };
@@ -433,6 +461,10 @@ happy"></textarea>
     try{ localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); }
     catch(e){ console.error('Could not save "'+key+'" — storage may be full or blocked.', e); }
   }
+  function lsRemove(key){
+    try{ localStorage.removeItem(STORAGE_PREFIX + key); }
+    catch(e){ console.error('Could not remove "'+key+'"', e); }
+  }
   function saveSpellingWords(){ lsSet('spellingWords', spellingWords); }
   function saveVocabWords(){ lsSet('vocabWords', vocabWords); }
   function saveProgress(){ lsSet('progress', progress); }
@@ -440,8 +472,8 @@ happy"></textarea>
   function saveProfile(){ lsSet('profile', profile); }
 
   function loadAll(){
-    spellingWords = lsGet('spellingWords', []);
-    vocabWords = lsGet('vocabWords', []);
+    spellingWords = lsGet('spellingWords', DEFAULT_SPELLING_WORDS);
+    vocabWords = lsGet('vocabWords', DEFAULT_VOCAB_WORDS);
     progress = lsGet('progress', { totalStars: 0 });
     settings = lsGet('settings', { textSize: 'normal' });
     profile = lsGet('profile', { childName: '' });
@@ -603,6 +635,9 @@ happy"></textarea>
           if(w.sentence) line += (w.definition ? ' | ' : ' |  | ') + w.sentence;
           return line;
         }).join('\n');
+    document.getElementById('reset-words-btn').textContent = isSpelling
+      ? "↺ Reset to this week's official spelling words"
+      : "↺ Reset to this week's official vocabulary words";
     document.getElementById('saved-msg').textContent = '';
   }
   document.getElementById('btn-parent').addEventListener('click', ()=>{
@@ -638,6 +673,20 @@ happy"></textarea>
       saveVocabWords();
       document.getElementById('saved-msg').textContent = 'Saved! ' + vocabWords.length + ' vocabulary word' + (vocabWords.length===1?'':'s') + ' ready to practice.';
     }
+  });
+  document.getElementById('reset-words-btn').addEventListener('click', ()=>{
+    const confirmMsg = "Reset to this week's official words? This replaces whatever is currently saved on this device — any custom edits here will be lost.";
+    if(!confirm(confirmMsg)) return;
+    if(parentTab === 'spelling'){
+      lsRemove('spellingWords');
+      spellingWords = DEFAULT_SPELLING_WORDS.slice();
+      document.getElementById('saved-msg').textContent = "Reset! This device will now follow future weekly spelling updates automatically.";
+    } else {
+      lsRemove('vocabWords');
+      vocabWords = DEFAULT_VOCAB_WORDS.slice();
+      document.getElementById('saved-msg').textContent = "Reset! This device will now follow future weekly vocabulary updates automatically.";
+    }
+    renderParentTab();
   });
   document.getElementById('profile-save-btn').addEventListener('click', ()=>{
     const val = document.getElementById('profile-name-input').value.trim();
