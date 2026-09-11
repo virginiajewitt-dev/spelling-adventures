@@ -240,6 +240,11 @@
     box-shadow:0 5px 0 var(--green-deep);
   }
   .save-btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--green-deep);}
+  .mode-green{background:#E3FBF0;border-color:var(--green);box-shadow:0 6px 0 var(--green-deep);color:var(--green-deep);}
+  .pass-dots{display:flex;gap:8px;justify-content:center;}
+  .pass-dot{width:10px;height:10px;border-radius:50%;background:#E3E1F5;}
+  .pass-dot.active{background:var(--violet);}
+  .pass-dot.done{background:var(--green);}
   .reset-btn{
     background:#F1F0FF;color:var(--violet-deep);font-family:var(--font-head);font-weight:700;
     font-size:calc(var(--fs-base)*0.92);padding:11px;width:100%;border-radius:14px;
@@ -301,6 +306,13 @@
         <span>
           <span class="mode-name">Spelling Race</span>
           <span class="mode-desc">Listen close and type it fast</span>
+        </span>
+      </button>
+      <button class="mode-card mode-green" data-mode="triple">
+        <span class="mode-emoji">🔁</span>
+        <span>
+          <span class="mode-name">Triple Spell</span>
+          <span class="mode-desc">Spell it three ways in a row</span>
         </span>
       </button>
       <p class="section-label">Vocabulary Games</p>
@@ -382,6 +394,21 @@ happy"></textarea>
     </div>
   </div>
 
+  <div id="screen-triple" class="screen">
+    <div class="game-top">
+      <button class="back-btn" id="triple-back">← Home</button>
+      <div class="progress-pill" id="triple-progress">1 of 5</div>
+    </div>
+    <div class="game-card">
+      <div class="pass-dots" id="triple-dots"></div>
+      <div style="font-weight:600;color:var(--ink-soft);" id="triple-pass-label"></div>
+      <div id="triple-word-area" style="text-align:center;"></div>
+      <input type="text" id="triple-input" class="race-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type here">
+      <button class="go-btn" id="triple-check">Check it!</button>
+      <div class="feedback-line" id="triple-feedback"></div>
+    </div>
+  </div>
+
   <div id="screen-meaning" class="screen">
     <div class="game-top">
       <button class="back-btn" id="mm-back">← Home</button>
@@ -427,21 +454,25 @@ happy"></textarea>
   // fresh copy (no saved data yet). Editing and saving in the Parent
   // screen replaces these permanently for that person's browser.
   const DEFAULT_SPELLING_WORDS = [
-    { word: 'knit', sentence: '' },
-    { word: 'kneel', sentence: '' },
-    { word: 'nose', sentence: '' },
-    { word: 'center', sentence: '' },
-    { word: 'nugget', sentence: '' },
-    { word: 'running', sentence: '' },
-    { word: 'winner', sentence: '' },
-    { word: 'why', sentence: '' }
+    { word: 'bandit', sentence: '' },
+    { word: 'shelf', sentence: '' },
+    { word: 'sprang', sentence: '' },
+    { word: 'munch', sentence: '' },
+    { word: 'picnic', sentence: '' },
+    { word: 'think', sentence: '' },
+    { word: 'wish', sentence: '' },
+    { word: 'drift', sentence: '' },
+    { word: 'box', sentence: '' },
+    { word: 'she', sentence: '' }
   ];
   const DEFAULT_VOCAB_WORDS = [
-    { word: 'Contest', definition: 'an event where individuals or teams compete to win', sentence: 'Isabella and Luke had a contest to see who could make the most basketball baskets in a row.' },
-    { word: 'Hoist', definition: 'to raise up in the air', sentence: "Isabella's dad had to hoist her up so she could reach the basketball hoop." },
-    { word: 'Mute', definition: 'silent; not speaking', sentence: 'Virginia hit mute during A for Adley so Isabella\'s dolls could take a quiet nap.' },
-    { word: 'Stands', definition: 'metal or wooden benches where people sit to watch a show or performance', sentence: "Luke and Virginia sat high up in the stands to cheer for Isabella's basketball team." },
-    { word: 'Pouts', definition: 'makes a sad face by curling the lower lip', sentence: 'Luke pouts and sticks out his lip every time he loses a basketball game to Isabella.' }
+    { word: 'Sprang', definition: 'jumped up', sentence: 'Luke sprang out of his chair when he heard the doorbell ring.' },
+    { word: 'Drifted', definition: 'carried away by wind or water', sentence: "Isabella's balloon drifted higher and higher until it disappeared into the clouds." },
+    { word: 'Nugget', definition: 'a small, bite-sized piece of food', sentence: 'Quinton popped one last chicken nugget into his mouth before dinner was over.' },
+    { word: 'Tongs', definition: 'a tool used to grab small objects', sentence: 'Virginia used the tongs to flip the pancakes on the griddle.' },
+    { word: 'Swish', definition: 'the whistling or rustling sound made by a quick movement', sentence: "Isabella heard a swish as her jump rope spun past her feet." },
+    { word: 'Den', definition: 'a cozy room for reading, watching TV, and other enjoyable activities', sentence: 'Rowan curled up with a blanket in the den to watch his favorite movie.' },
+    { word: 'Deck', definition: 'a floor on the outside of a house that people can walk and sit on', sentence: 'Kaleb and his friends played tag all afternoon on the wooden deck.' }
   ];
   let spellingWords = [];  // [{word, sentence}]
   let vocabWords = [];     // [{word, definition, sentence}]
@@ -592,6 +623,7 @@ happy"></textarea>
 
     setCardDisabled('builder', spellingWords.length===0);
     setCardDisabled('race', spellingWords.length===0);
+    setCardDisabled('triple', spellingWords.length===0);
     setCardDisabled('vocabblank', vocabWords.filter(w=>w.sentence && w.sentence.trim()).length===0);
     setCardDisabled('meaning', vocabWords.filter(w=>w.definition && w.definition.trim()).length===0);
   }
@@ -602,6 +634,7 @@ happy"></textarea>
       const mode = btn.dataset.mode;
       if(mode==='builder') startBuilder();
       else if(mode==='race') startRace();
+      else if(mode==='triple') startTriple();
       else if(mode==='meaning') startMeaning();
       else if(mode==='vocabblank') vocabBlankGame.start(vocabWords);
     });
@@ -810,7 +843,7 @@ happy"></textarea>
   let rQueue=[], rIndex=0, rSessionStars=0;
   let raceTimer = null;
   let raceTimeLeft = 20;
-  const RACE_SECONDS = 20;
+  const RACE_SECONDS = 40;
 
   function startRace(){
     rQueue = shuffle(spellingWords); rIndex = 0; rSessionStars = 0;
@@ -869,6 +902,84 @@ happy"></textarea>
     if(entry) speak(entry.word);
   });
   document.getElementById('race-back').addEventListener('click', ()=>{ stopRaceTimer(); renderHome(); showScreen('home'); });
+
+  // ================= TRIPLE SPELL =================
+  let tQueue = [], tIndex = 0, tPass = 0, tSessionStars = 0;
+  const TRIPLE_LABELS = ['Copy it', 'Peek, then recall', 'Cold recall — no peeking!'];
+
+  function startTriple(){
+    tQueue = shuffle(spellingWords); tIndex = 0; tPass = 0; tSessionStars = 0;
+    showScreen('triple'); loadTripleWord();
+  }
+  function loadTripleWord(){
+    if(tIndex >= tQueue.length){ finishSession(tSessionStars); return; }
+    tPass = 0;
+    document.getElementById('triple-progress').textContent = (tIndex+1) + ' of ' + tQueue.length;
+    renderTriplePass();
+  }
+  function renderTriplePass(){
+    const entry = tQueue[tIndex];
+    const word = entry.word.toLowerCase();
+    document.getElementById('triple-feedback').textContent = '';
+    document.getElementById('triple-input').value = '';
+    document.getElementById('triple-pass-label').textContent = 'Pass ' + (tPass+1) + ' of 3 · ' + TRIPLE_LABELS[tPass];
+
+    const dotsWrap = document.getElementById('triple-dots');
+    dotsWrap.innerHTML = '';
+    for(let i=0;i<3;i++){
+      const d = document.createElement('span');
+      d.className = 'pass-dot' + (i < tPass ? ' done' : i === tPass ? ' active' : '');
+      dotsWrap.appendChild(d);
+    }
+
+    const area = document.getElementById('triple-word-area');
+    if(tPass === 0){
+      area.innerHTML = '<div style="font-family:var(--font-head);font-weight:800;font-size:calc(var(--fs-base)*1.8);letter-spacing:0.04em;text-transform:uppercase;">' + word + '</div><div style="font-size:calc(var(--fs-base)*0.85);color:var(--ink-soft);margin-top:4px;">Copy it below</div>';
+      setTimeout(()=> document.getElementById('triple-input').focus(), 100);
+    } else if(tPass === 1){
+      area.innerHTML = '<button class="speak-btn" id="triple-speak" title="Hear the word" style="width:48px;height:48px;font-size:calc(var(--fs-base)*1.3);margin-bottom:8px;">🔊</button><div id="triple-peek-word" style="font-family:var(--font-head);font-weight:800;font-size:calc(var(--fs-base)*1.8);letter-spacing:0.04em;text-transform:uppercase;">' + word + '</div><button class="hint-btn" id="triple-hide" style="margin-top:8px;">Got it, hide it!</button>';
+      document.getElementById('triple-speak').addEventListener('click', ()=> speak(word));
+      document.getElementById('triple-hide').addEventListener('click', ()=>{
+        document.getElementById('triple-peek-word').style.visibility = 'hidden';
+        document.getElementById('triple-input').focus();
+      });
+      speak(word);
+    } else {
+      area.innerHTML = '<button class="speak-btn" id="triple-speak" title="Hear the word" style="width:48px;height:48px;font-size:calc(var(--fs-base)*1.3);">🔊</button><div style="font-size:calc(var(--fs-base)*0.85);color:var(--ink-soft);margin-top:8px;">Listen, then type it — no peeking!</div>';
+      document.getElementById('triple-speak').addEventListener('click', ()=> speak(word));
+      speak(word);
+    }
+  }
+  function checkTripleAnswer(){
+    const entry = tQueue[tIndex];
+    const word = entry.word.toLowerCase();
+    const typed = document.getElementById('triple-input').value.trim().toLowerCase();
+    const feedback = document.getElementById('triple-feedback');
+    if(!typed){
+      feedback.textContent = 'Type your best guess first!';
+      feedback.className = 'feedback-line hint';
+      return;
+    }
+    if(typed === word){
+      feedback.textContent = 'Correct! 🎉';
+      feedback.className = 'feedback-line good';
+      confettiBurst();
+      awardStar(); tSessionStars++;
+      setTimeout(()=>{
+        tPass++;
+        if(tPass >= 3){ tIndex++; loadTripleWord(); }
+        else { renderTriplePass(); }
+      }, 800);
+    } else {
+      feedback.innerHTML = 'You wrote <strong>' + typed + '</strong> — the word is <strong>' + word + '</strong>. Try again!';
+      feedback.className = 'feedback-line hint';
+      document.getElementById('triple-input').value = '';
+      document.getElementById('triple-input').focus();
+    }
+  }
+  document.getElementById('triple-check').addEventListener('click', checkTripleAnswer);
+  document.getElementById('triple-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') checkTripleAnswer(); });
+  document.getElementById('triple-back').addEventListener('click', ()=>{ renderHome(); showScreen('home'); });
 
   // ================= FILL IN THE BLANK (shared: spelling story + vocab) =================
   // Only words with a real example sentence can be the answer here — a sentence
