@@ -454,25 +454,27 @@ happy"></textarea>
   // fresh copy (no saved data yet). Editing and saving in the Parent
   // screen replaces these permanently for that person's browser.
   const DEFAULT_SPELLING_WORDS = [
-    { word: 'bandit', sentence: '' },
-    { word: 'shelf', sentence: '' },
-    { word: 'sprang', sentence: '' },
-    { word: 'munch', sentence: '' },
-    { word: 'picnic', sentence: '' },
-    { word: 'think', sentence: '' },
-    { word: 'wish', sentence: '' },
-    { word: 'drift', sentence: '' },
-    { word: 'box', sentence: '' },
-    { word: 'she', sentence: '' }
+    { word: 'snacking', sentence: '' },
+    { word: 'mixing', sentence: '' },
+    { word: 'smelling', sentence: '' },
+    { word: 'running', sentence: '' },
+    { word: 'kissing', sentence: '' },
+    { word: 'buzzing', sentence: '' },
+    { word: 'hitting', sentence: '' },
+    { word: 'until', sentence: '' },
+    { word: 'problem', sentence: '' },
+    { word: 'how', sentence: '' }
   ];
   const DEFAULT_VOCAB_WORDS = [
-    { word: 'Sprang', definition: 'jumped up', sentence: 'Luke sprang out of his chair when he heard the doorbell ring.' },
-    { word: 'Drifted', definition: 'carried away by wind or water', sentence: "Isabella's balloon drifted higher and higher until it disappeared into the clouds." },
-    { word: 'Nugget', definition: 'a small, bite-sized piece of food', sentence: 'Quinton popped one last chicken nugget into his mouth before dinner was over.' },
-    { word: 'Tongs', definition: 'a tool used to grab small objects', sentence: 'Virginia used the tongs to flip the pancakes on the griddle.' },
-    { word: 'Swish', definition: 'the whistling or rustling sound made by a quick movement', sentence: "Isabella heard a swish as her jump rope spun past her feet." },
-    { word: 'Den', definition: 'a cozy room for reading, watching TV, and other enjoyable activities', sentence: 'Rowan curled up with a blanket in the den to watch his favorite movie.' },
-    { word: 'Deck', definition: 'a floor on the outside of a house that people can walk and sit on', sentence: 'Kaleb and his friends played tag all afternoon on the wooden deck.' }
+    { word: 'Quilt', definition: 'a thick blanket made by sewing small pieces of fabric together', sentences: ['Isabella snuggled under the cozy quilt her grandmother made.', 'Raynie helped fold the quilt at the end of movie night.'] },
+    { word: 'Tug', definition: 'to pull in a strong way', sentences: ['Luke gave the rope a hard tug to pull the wagon out of the mud.', 'Nevaeh felt a tug on her fishing line and reeled it in fast.'] },
+    { word: 'Lenses', definition: 'clear pieces of glass or plastic used in glasses and other tools to change the way things look', sentences: ['Rowan cleaned the lenses of his glasses before reading.', 'Demi looked through the lenses of the telescope to see the stars.'] },
+    { word: 'Glinted', definition: 'gave off flashes of bright light', sentences: ["Quinton's new bike glinted in the sunlight as he rode down the street.", 'The lake glinted while Kaleb skipped rocks across the water.'] },
+    { word: 'Swung', definition: 'moved backward and forward around a point', sentences: ['Isabella swung as high as she could on the playground swing.', 'Luke swung the bat and hit the ball over the fence.'] },
+    { word: 'Ham', definition: 'smoked meat from the back leg of a pig', sentences: ['Raynie helped make ham sandwiches for the picnic.', 'Kaleb asked for another slice of ham at dinner.'] },
+    { word: 'Shed', definition: 'a small, simple building where things are stored', sentences: ['Rowan kept his bike helmet in the shed by the garage.', 'Nevaeh helped her dad clean out the old shed on Saturday.'] },
+    { word: 'Hung', definition: 'attached to something with no support from below', sentences: ['Demi hung her backpack on the hook by the door.', "Quinton's artwork hung on the wall at school."] },
+    { word: 'Lap', definition: 'to get food or drink into the mouth using the tongue', sentences: ['The puppy began to lap up water from its bowl.', 'Isabella watched the kitten lap milk from a small dish.'] }
   ];
   let spellingWords = [];  // [{word, sentence}]
   let vocabWords = [];     // [{word, definition, sentence}]
@@ -502,9 +504,19 @@ happy"></textarea>
   function saveSettings(){ lsSet('settings', settings); }
   function saveProfile(){ lsSet('profile', profile); }
 
+  // Converts any older saved vocab entries (single "sentence" field) into
+  // the current "sentences" array format, so nobody's saved data breaks.
+  function normalizeVocabWords(list){
+    return list.map(w=>{
+      if(w.sentences) return w;
+      const sentences = (w.sentence && w.sentence.trim()) ? [w.sentence.trim()] : [];
+      return { word: w.word, definition: w.definition || '', sentences };
+    });
+  }
+
   function loadAll(){
     spellingWords = lsGet('spellingWords', DEFAULT_SPELLING_WORDS);
-    vocabWords = lsGet('vocabWords', DEFAULT_VOCAB_WORDS);
+    vocabWords = normalizeVocabWords(lsGet('vocabWords', DEFAULT_VOCAB_WORDS));
     progress = lsGet('progress', { totalStars: 0 });
     settings = lsGet('settings', { textSize: 'normal' });
     profile = lsGet('profile', { childName: '' });
@@ -624,7 +636,7 @@ happy"></textarea>
     setCardDisabled('builder', spellingWords.length===0);
     setCardDisabled('race', spellingWords.length===0);
     setCardDisabled('triple', spellingWords.length===0);
-    setCardDisabled('vocabblank', vocabWords.filter(w=>w.sentence && w.sentence.trim()).length===0);
+    setCardDisabled('vocabblank', vocabWords.filter(w=>w.sentences && w.sentences.length>0).length===0);
     setCardDisabled('meaning', vocabWords.filter(w=>w.definition && w.definition.trim()).length===0);
   }
 
@@ -657,15 +669,17 @@ happy"></textarea>
     document.getElementById('parent-heading').textContent = isSpelling ? "This week's spelling words" : "This week's vocabulary words";
     document.getElementById('parent-instructions').innerHTML = isSpelling
       ? 'One word per line — that\'s all you need. Every word works right away in Word Builder and Spelling Race. Example:<br><em>whale</em>'
-      : 'One word per line. Add the meaning after a "|" to unlock <strong>Word Meanings</strong> for that word, and an example sentence after a second "|" to unlock <strong>Story Time</strong> too. Example:<br><em>enormous | very, very big | The elephant was enormous.</em>';
+      : 'One word per line. Add the meaning after a "|" to unlock <strong>Word Meanings</strong>, then one or more example sentences (each separated by another "|") to unlock <strong>Story Time</strong> — adding more than one sentence gives extra variety each time it comes up. Example:<br><em>enormous | very, very big | The elephant was enormous. | The building looked enormous next to the tiny house.</em>';
     const ta = document.getElementById('word-input');
-    ta.placeholder = isSpelling ? 'cat\ndog | My dog likes to run.\nhappy' : 'enormous | very, very big | The elephant was enormous.\nbrave | not scared of anything';
+    ta.placeholder = isSpelling ? 'cat\ndog | My dog likes to run.\nhappy' : 'enormous | very, very big | The elephant was enormous. | The building looked enormous next to the tiny house.\nbrave | not scared of anything';
     ta.value = isSpelling
       ? spellingWords.map(w=> w.sentence ? (w.word+' | '+w.sentence) : w.word).join('\n')
       : vocabWords.map(w=>{
           let line = w.word;
-          if(w.definition) line += ' | ' + w.definition;
-          if(w.sentence) line += (w.definition ? ' | ' : ' |  | ') + w.sentence;
+          const hasDef = w.definition && w.definition.trim();
+          const hasSentences = w.sentences && w.sentences.length > 0;
+          if(hasDef || hasSentences) line += ' | ' + (w.definition || '');
+          if(hasSentences) line += ' | ' + w.sentences.join(' | ');
           return line;
         }).join('\n');
     document.getElementById('reset-words-btn').textContent = isSpelling
@@ -700,8 +714,8 @@ happy"></textarea>
         const parts = line.split('|');
         const word = parts[0].trim();
         const definition = parts[1] ? parts[1].trim() : '';
-        const sentence = parts[2] ? parts[2].trim() : '';
-        return { word, definition, sentence };
+        const sentences = parts.slice(2).map(s=>s.trim()).filter(s=>s.length>0);
+        return { word, definition, sentences };
       }).filter(w=>w.word.length>0);
       saveVocabWords();
       document.getElementById('saved-msg').textContent = 'Saved! ' + vocabWords.length + ' vocabulary word' + (vocabWords.length===1?'':'s') + ' ready to practice.';
@@ -988,12 +1002,12 @@ happy"></textarea>
   const BLANK_TOKEN = '@@BLANK@@';
 
   function makeFillBlankGame(cfg){
-    let queue = [], index = 0, sessionStars = 0, fullList = [];
+    let queue = [], index = 0, sessionStars = 0, fullList = [], currentSentence = '';
     const el = id => document.getElementById(cfg.prefix + '-' + id);
 
     function start(sourceList){
       fullList = sourceList;
-      queue = shuffle(sourceList.filter(w=> w.sentence && w.sentence.trim()));
+      queue = shuffle(sourceList.filter(w=> w.sentences && w.sentences.length > 0));
       index = 0; sessionStars = 0;
       showScreen(cfg.screenName);
       loadWord();
@@ -1003,8 +1017,9 @@ happy"></textarea>
       el('progress').textContent = (index+1) + ' of ' + queue.length;
       el('feedback').textContent = '';
       const entry = queue[index];
+      currentSentence = entry.sentences[Math.floor(Math.random() * entry.sentences.length)];
       const re = new RegExp('\\b'+escapeRegExp(entry.word)+'\\b','i');
-      const sentence = re.test(entry.sentence) ? entry.sentence.replace(re, BLANK_TOKEN) : (entry.sentence + ' (' + BLANK_TOKEN + ')');
+      const sentence = re.test(currentSentence) ? currentSentence.replace(re, BLANK_TOKEN) : (currentSentence + ' (' + BLANK_TOKEN + ')');
       el('sentence').innerHTML = sentence.split(BLANK_TOKEN).join('<span class="story-blank">&nbsp;</span>');
       const others = fullList.filter(w=> w.word.toLowerCase() !== entry.word.toLowerCase());
       const distractors = shuffle(others).slice(0,2).map(w=>w.word);
@@ -1021,8 +1036,7 @@ happy"></textarea>
             el('feedback').className = 'feedback-line good';
             confettiBurst();
             awardStar(); sessionStars++;
-            const fullSentence = entry.sentence && entry.sentence.trim() ? entry.sentence : (entry.word.charAt(0).toUpperCase()+entry.word.slice(1) + '.');
-            speak(fullSentence);
+            speak(currentSentence);
             setTimeout(()=>{ index++; loadWord(); }, 1300);
           } else {
             btn.classList.add('wrong');
