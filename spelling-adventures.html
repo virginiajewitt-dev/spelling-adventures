@@ -744,7 +744,7 @@ happy"></textarea>
     if(parentTab === 'spelling'){
       spellingWords = lines.map(line=>{
         const parts = line.split('|');
-        const word = parts[0].trim();
+        const word = normalizeApostrophes(parts[0].trim());
         const sentence = parts[1] ? parts[1].trim() : '';
         return { word, sentence };
       }).filter(w=>w.word.length>0);
